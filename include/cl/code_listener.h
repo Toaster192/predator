@@ -62,6 +62,10 @@ struct cl_loc {
      * @note not used for now
      */
     bool                                sysp;
+    /**
+     * Used to pass an instruction pointer to sl.
+     */
+    void				*insn;
 };
 
 /**

@@ -296,6 +296,7 @@ void CLPass::freeAccessor(struct cl_accessor *acc) {
 void CLPass::findLocation(Instruction *i, struct cl_loc *loc) {
 
     *loc = cl_loc_known;
+    loc->insn = i;
 
 #ifdef LLVM_HOST_3_7_OR_NEWER
     if (DebugLoc dbg = i->getDebugLoc()) {

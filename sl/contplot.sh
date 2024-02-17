@@ -19,4 +19,4 @@ seek_input_file "$@" || usage
 
 self="`readlink -f "$0"`"
 self_dir="`dirname "$self"`"
-make -j9 fast -C "$self_dir" && "${self_dir}/slgcc" "$@"
+make -j9 fast -C "$self_dir" && "${self_dir}/slllvm" "$@"

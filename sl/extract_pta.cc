@@ -1,22 +1,3 @@
-/*
- * Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
- *
- * This file is part of predator.
- *
- * predator is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * any later version.
- *
- * predator is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with predator.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 #include "config.h"
 #include "symplot.hh"
 
@@ -30,7 +11,6 @@
 #include "symseg.hh"
 #include "util.hh"
 #include "worklist.hh"
-#include "extract_pta.hh"
 
 #include <cctype>
 #include <fstream>
@@ -1330,8 +1310,6 @@ bool plotHeapCore(
     out << "}\n";
     const bool ok = !!out;
     out.close();
-
-    extractPTA(sh, name, loc);
     return ok;
 }
 
@@ -1383,4 +1361,263 @@ bool plotHeap(
         crawler.digObj(obj);
 
     return plotHeapCore(sh, name, loc, crawler.objs(), crawler.vals());
+}
+
+// SEPARATOR
+// SEPARATOR
+// SEPARATOR
+// SEPARATOR
+// SEPARATOR
+// SEPARATOR
+// SEPARATOR
+
+struct PTAData {
+    typedef std::pair<TObjId, TOffset>                      TFieldKey;
+    typedef std::map<TFieldKey, FldList>                    TLiveFields;
+    typedef std::pair<int /* ID */, TValId>                 TDangVal;
+    typedef std::vector<TDangVal>                           TDangValues;
+
+    SymHeap                            &sh;
+    std::ostream                       &out;
+    const TObjSet                      &objs;
+    const TValSet                      &values;
+    const TIdSet                       *pHighlight;
+    int                                 last;
+    TLiveFields                         liveFields;
+    TFldSet                             lonelyFields;
+    TDangValues                         dangVals;
+
+    PlotData(
+            const SymHeap              &sh_,
+            std::ostream               &out_,
+            const TObjSet              &objs_,
+            const TValSet              &values_,
+            const TIdSet               *pHighlight_):
+        sh(const_cast<SymHeap &>(sh_)),
+        out(out_),
+        objs(objs_),
+        values(values_),
+        pHighlight(pHighlight_),
+        last(0)
+    {
+    }
+};
+
+void extractSingleValue(PTAData &ptadata, const TValId val)
+{
+    SymHeap &sh = ptadata.sh;
+
+    const char *color = "black";
+    const char *suffix = 0;
+
+    const TObjId obj = sh.objByAddr(val);
+    const EStorageClass sc = sh.objStorClass(obj);
+
+    const EValueTarget code = sh.valTarget(val);
+    switch (code) {
+        case VT_CUSTOM:
+            // skip it, custom values are now handled in plotHasValue()
+            return;
+
+        case VT_OBJECT:
+            break;
+
+        case VT_INVALID:
+        case VT_COMPOSITE:
+        case VT_RANGE:
+            color = "red";
+            break;
+
+        case VT_UNKNOWN:
+            suffix = labelByOrigin(sh.valOrigin(val));
+            // fall through!
+            goto preserve_suffix;
+    }
+
+    switch (sc) {
+        case SC_INVALID:
+        case SC_UNKNOWN:
+            color = "red";
+            break;
+
+        case SC_STATIC:
+        case SC_ON_STACK:
+            color = "blue";
+            break;
+
+        case SC_ON_HEAP:
+            goto preserve_suffix;
+    }
+
+    suffix = labelByTarget(code);
+preserve_suffix:
+
+    const ETargetSpecifier ts = sh.targetSpec(val);
+    if (TS_REGION != ts)
+        color = "chartreuse2";
+
+    const float pw = static_cast<float>(1U + sh.usedByCount(val));
+    ptadata.out << "\t" << SL_QUOTE(val)
+        << " [shape=ellipse, penwidth=" << pw
+        << ", fontcolor=" << color
+        << ", label=\"#" << val;
+
+    if (suffix)
+        plot.out << " " << suffix;
+
+    if (isAnyDataArea(code)) {
+        const IR::Range &offRange = sh.valOffsetRange(val);
+        ptadata.out << " [off = ";
+        printRawRange(ptadata.out, offRange);
+
+        const ETargetSpecifier ts = sh.targetSpec(val);
+        if (TS_REGION != ts)
+            ptadata.out << ", " << labelByTargetSpec(ts);
+
+        ptadata.out << ", obj = #" << obj << "]";
+    }
+
+    ptadata.out << "\"];\n";
+}
+
+void extractPointsTo(PTAData &ptadata, const TValId val, const TFldId target)
+{
+    ptadata.out << "\t" << SL_QUOTE(val)
+        << " -> " << SL_QUOTE(target)
+        << " [color=chartreuse2, fontcolor=chartreuse2];\n";
+}
+
+void extractRangePtr(PTAData &ptadata, TValId val, TObjId obj)
+{
+    ptadata.out << "\t" << SL_QUOTE(val) << " -> "
+        << SL_QUOTE(obj)
+        << " [color=red, fontcolor=red];\n";
+}
+
+void extractAddrs(PTAData &ptadata)
+{
+    SymHeap &sh = ptadata.sh;
+
+    for (const TValId val : ptadata.values) {
+        // extract a value node
+        extractSingleValue(ptadata, val);
+
+        const TObjId obj = sh.objByAddr(val);
+
+        const EValueTarget code = sh.valTarget(val);
+        switch (code) {
+            case VT_OBJECT:
+                break;
+
+            case VT_RANGE:
+                extractRangePtr(ptadata, val, obj);
+                continue;
+
+            default:
+                continue;
+        }
+
+        const TOffset off = sh.valOffset(val);
+        if (off) {
+            const PTAData::TFieldKey key(obj, off);
+            PTAData::TLiveFields::const_iterator it = ptadata.liveFields.find(key);
+            if ((ptadata.liveFields.end() != it) && (1 == it->second.size())) {
+                // ptadata the target field as an abbreviation
+                const FldHandle &target = it->second.front();
+                extractPointsTo(ptadata, val, target.fieldId());
+                continue;
+            }
+        }
+
+        extractOffset(ptadata, off, val, obj);
+    }
+
+    // go through value prototypes used in uniform blocks
+    for (PTAData::TDangValues::const_reference item : ptadata.dangVals) {
+        const TValId val = item.second;
+        if (val <= 0)
+            continue;
+
+        // ptadata a value node
+        CL_BREAK_IF(isAnyDataArea(sh.valTarget(val)));
+        extractSingleValue(ptadata, val);
+    }
+}
+
+void extractEverything(PTAData &ptadata)
+{
+    //plotObjects(plot);
+    extractAddrs(ptadata);
+    //plotHasValueEdges(plot);
+    //plotNeqEdges(plot);
+}
+
+bool extractPTACore(
+        const SymHeap                   &sh,
+        const std::string               &name,
+        const struct cl_loc             *loc,
+        const TObjSet                   &objs,
+        const TValSet                   &vals,
+        std::string                     *pName = 0,
+        const TIdSet                    *pHighlight = 0)
+{
+    PlotEnumerator *pe = PlotEnumerator::instance();
+    std::string plotName(pe->decorate(name));
+    std::string fileName(plotName + "-pta.txt");
+
+    CL_ERROR("foo");
+    if (pName)
+        // propagate the resulting name back to the caller
+        *pName = plotName;
+
+    // create a dot file
+    std::fstream out(fileName.c_str(), std::ios::out);
+    if (!out) {
+        CL_ERROR("unable to create file '" << fileName << "'");
+        return false;
+    }
+
+    // open graph
+    out << "pta:\n";
+
+    // check whether we can write to stream
+    if (!out.flush()) {
+        CL_ERROR("unable to write file '" << fileName << "'");
+        out.close();
+        return false;
+    }
+
+    if (loc)
+        CL_NOTE_MSG(loc, "writing heap graph to '" << fileName << "'...");
+    else
+        CL_DEBUG("writing heap graph to '" << fileName << "'...");
+
+    // initialize an instance of PlotData
+    PTAData ptadata(sh, out, objs, vals, pHighlight);
+
+    // do our stuff
+    extractEverything(ptadata);
+
+    // close graph
+    const bool ok = !!out;
+    out.close();
+    return ok;
+}
+
+bool extractPTA(
+        const SymHeap                   &sh,
+        const std::string               &name,
+        const struct cl_loc             *loc)
+{
+    HeapCrawler crawler(sh);
+
+    TObjList allObjs;
+    sh.gatherObjects(allObjs);
+    for (const TObjId obj : allObjs)
+        crawler.digObj(obj);
+
+    const TObjSet objs = crawler.objs();
+    const TValSet vals = crawler.vals();
+
+    return extractPTAcore(sh, name, loc, objs, vals);
 }
