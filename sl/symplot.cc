@@ -1332,6 +1332,7 @@ bool plotHeapCore(
     out.close();
 
     extractPTA(sh, name, loc);
+
     return ok;
 }
 

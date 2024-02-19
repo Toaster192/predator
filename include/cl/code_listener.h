@@ -65,7 +65,7 @@ struct cl_loc {
     /**
      * Used to pass an instruction pointer to sl.
      */
-    void				*insn;
+    //void				*insn;
 };
 
 /**
