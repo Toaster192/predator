@@ -31,6 +31,7 @@ extern "C" {
 #include "clplug.hh"
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/raw_ostream.h"
 
 #if defined(LLVM_VERSION_MAJOR) && ((LLVM_VERSION_MAJOR > 3) || \
                                     ((LLVM_VERSION_MAJOR == 3) && (LLVM_VERSION_MINOR >= 7)))
@@ -296,7 +297,7 @@ void CLPass::freeAccessor(struct cl_accessor *acc) {
 void CLPass::findLocation(Instruction *i, struct cl_loc *loc) {
 
     *loc = cl_loc_known;
-    //loc->insn = i;
+    //loc->llvm_insn = i;
 
 #ifdef LLVM_HOST_3_7_OR_NEWER
     if (DebugLoc dbg = i->getDebugLoc()) {
@@ -964,6 +965,8 @@ bool CLPass::swapVar(Instruction *from, Value *to) {
 struct cl_var *CLPass::handleVariable(Value *v) {
 
     struct cl_var *clv = nullptr;
+    llvm::errs() << "Foo: " << *v;
+    //clv->llvm_val = v;
 
     VarMap::const_iterator item = VarTable.find(v);
     if (item == VarTable.end()) { // not found

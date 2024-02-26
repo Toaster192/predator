@@ -5,6 +5,10 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include "llvm/IR/Value.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Support/raw_ostream.h"
+
 #include "plotenum.hh"
 #include "symheap.hh"
 #include "sympred.hh"
@@ -146,19 +150,6 @@ bool /* anyChange */ MyHeapCrawler::digVal(const TValId val)
 //
 //#define SL_QUOTE(what) "\"" << what << "\""
 //
-//const char* labelByStorClass(const EStorageClass code)
-//{
-//    switch (code) {
-//        GEN_labelByCode(SC_INVALID);
-//        GEN_labelByCode(SC_UNKNOWN);
-//        GEN_labelByCode(SC_STATIC);
-//        GEN_labelByCode(SC_ON_HEAP);
-//        GEN_labelByCode(SC_ON_STACK);
-//    }
-//
-//    CL_BREAK_IF("invalid call of labelByStorClass()");
-//    return "";
-//}
 //
 //const char* myLabelByTargetSpec(const ETargetSpecifier code)
 //{
@@ -195,351 +186,6 @@ bool /* anyChange */ MyHeapCrawler::digVal(const TValId val)
 //        << ", fontcolor=" << color
 //        << ", label=\"[" << SIGNED_OFF(off)
 //        << "]\"];\n";
-//}
-//
-//class CltFinder {
-//    private:
-//        const TObjType          cltRoot_;
-//        const TObjType          cltToSeek_;
-//        const TOffset           offToSeek_;
-//        TFieldIdxChain          icFound_;
-//
-//    public:
-//        CltFinder(TObjType cltRoot, TObjType cltToSeek, TOffset offToSeek):
-//            cltRoot_(cltRoot),
-//            cltToSeek_(cltToSeek),
-//            offToSeek_(offToSeek)
-//        {
-//        }
-//
-//        const TFieldIdxChain& icFound() const { return icFound_; }
-//
-//        bool operator()(const TFieldIdxChain &ic, const struct cl_type_item *it)
-//        {
-//            const TObjType clt = it->type;
-//            if (clt != cltToSeek_)
-//                return /* continue */ true;
-//
-//            const TOffset off = offsetByIdxChain(cltRoot_, ic);
-//            if (offToSeek_ != off)
-//                return /* continue */ true;
-//
-//            // matched!
-//            icFound_ = ic;
-//            return false;
-//        }
-//};
-//
-//bool digIcByOffset(
-//        TFieldIdxChain                  *pDst,
-//        const TObjType                  cltRoot,
-//        const TObjType                  cltField,
-//        const TOffset                   offRoot)
-//{
-//    CL_BREAK_IF(!cltRoot || !cltField);
-//    if (!offRoot && (*cltRoot == *cltField))
-//        // the root matches --> no fields on the way
-//        return false;
-//
-//    CltFinder visitor(cltRoot, cltField, offRoot);
-//    if (traverseTypeIc(cltRoot, visitor, /* digOnlyComposite */ true))
-//        // not found
-//        return false;
-//
-//    *pDst = visitor.icFound();
-//    return true;
-//}
-//
-//void describeVarCore(int *pInst, PlotData &plot, const TObjId obj)
-//{
-//    SymHeap &sh = plot.sh;
-//    TStorRef stor = sh.stor();
-//
-//    CallInst ci(-1, -1);
-//    if (sh.isAnonStackObj(obj, &ci)) {
-//        // anonymous stack object
-//        plot.out << "STACK of ";
-//        if (-1 == ci.uid)
-//            plot.out << "FNC_INVALID";
-//        else
-//            plot.out << nameOf(*stor.fncs[ci.uid]) << "()";
-//        *pInst = ci.inst;
-//    }
-//    else {
-//        // var lookup
-//        const CVar cv = sh.cVarByObject(obj);
-//        plot.out << "CL" << varToString(stor, cv.uid);
-//        *pInst = cv.inst;
-//    }
-//}
-//
-//void describeVar(PlotData &plot, const TObjId obj)
-//{
-//    if (OBJ_RETURN == obj) {
-//        plot.out << "OBJ_RETURN";
-//        return;
-//    }
-//
-//    int inst;
-//    if (plot.sh.isValid(obj))
-//        describeVarCore(&inst, plot, obj);
-//    else
-//        inst = -1;
-//
-//    plot.out << " [obj = #" << obj;
-//    if (1 < inst)
-//        plot.out << ", inst = " << inst;
-//    plot.out << "]";
-//}
-//
-//
-//void myPrintRawInt(
-//        std::ostream                &str,
-//        const IR::TInt               i,
-//        const char                  *suffix = "")
-//{
-//    if (IR::IntMin == i)
-//        str << "-inf";
-//    else if (IR::IntMax == i)
-//        str << "inf";
-//    else
-//        str << i;
-//
-//    str << suffix;
-//}
-//
-//void myPrintRawRange(
-//        std::ostream                &str,
-//        const IR::Range             &rng,
-//        const char                  *suffix = "")
-//{
-//    if (isSingular(rng)) {
-//        str << rng.lo << suffix;
-//        return;
-//    }
-//
-//    myPrintRawInt(str, rng.lo, suffix);
-//    str << " .. ";
-//    myPrintRawInt(str, rng.hi, suffix);
-//
-//    if (isAligned(rng))
-//        str << ", alignment = " << rng.alignment << suffix;
-//}
-//
-//void plotRawObject(PlotData &plot, const TObjId obj, const char *color)
-//{
-//    SymHeap &sh = plot.sh;
-//    const TSizeRange size = sh.objSize(obj);
-//
-//    const bool isValid = sh.isValid(obj);
-//    if (!isValid)
-//        color = "red";
-//
-//    plot.out << "\t" << SL_QUOTE(obj)
-//        << " [shape=box"
-//        << ", color=" << color
-//        << ", fontcolor=" << color
-//        << ", label=\"";
-//
-//    if (!sh.isValid(obj))
-//        plot.out << "[INVALID] ";
-//
-//    const EStorageClass code = sh.objStorClass(obj);
-//    if (isProgramVar(code))
-//        describeVar(plot, obj);
-//    else
-//        plot.out << "#" << obj;
-//
-//    plot.out << " [" << labelByStorClass(code) << ", size = ";
-//    myPrintRawRange(plot.out, size, " B");
-//    plot.out << "]\"];\n";
-//}
-//
-//enum EFieldClass {
-//    FC_VOID = 0,
-//    FC_PTR,
-//    FC_NEXT,
-//    FC_PREV,
-//    FC_DATA
-//};
-//
-//struct FieldWrapper {
-//    FldHandle       fld;
-//    EFieldClass     code;
-//
-//    FieldWrapper():
-//        code(FC_VOID)
-//    {
-//    }
-//
-//    FieldWrapper(const FldHandle &obj_, EFieldClass code_):
-//        fld(obj_),
-//        code(code_)
-//    {
-//    }
-//
-//    FieldWrapper(const FldHandle &obj_):
-//        fld(obj_),
-//        code(isDataPtr(fld.type())
-//            ? FC_PTR
-//            : FC_DATA)
-//    {
-//    }
-//};
-//
-//void plotUniformBlocks(PlotData &plot, const TObjId obj)
-//{
-//    SymHeap &sh = plot.sh;
-//
-//    // get all uniform blocks inside the given object
-//    TUniBlockMap bMap;
-//    sh.gatherUniformBlocks(bMap, obj);
-//
-//    // plot all uniform blocks
-//    for (TUniBlockMap::const_reference item : bMap) {
-//        const UniformBlock &bl = item.second;
-//
-//        // plot block node
-//        const int id = ++plot.last;
-//        plot.out << "\t" << SL_QUOTE("lonely" << id)
-//            << " [shape=box, color=blue, fontcolor=blue, label=\"UNIFORM_BLOCK "
-//            << bl.size << "B\"];\n";
-//
-//        // plot offset edge
-//        const TOffset off = bl.off;
-//        CL_BREAK_IF(off < 0);
-//        plot.out << "\t" << SL_QUOTE(obj)
-//            << " -> " << SL_QUOTE("lonely" << id)
-//            << " [color=black, fontcolor=black, label=\"[+"
-//            << off << "]\"];\n";
-//
-//        // schedule hasValue edge
-//        const PlotData::TDangVal dv(id, bl.tplValue);
-//        plot.dangVals.push_back(dv);
-//    }
-//}
-//
-//template <class TCont>
-//void plotFields(PlotData &plot, const TObjId obj, const TCont &liveFields)
-//{
-//    SymHeap &sh = plot.sh;
-//
-//    FldHandle next;
-//    FldHandle prev;
-//
-//    const EObjKind kind = sh.objKind(obj);
-//    switch (kind) {
-//        case OK_REGION:
-//        case OK_OBJ_OR_NULL:
-//            break;
-//
-//        case OK_DLS:
-//        case OK_SEE_THROUGH_2N:
-//            prev = prevPtrFromSeg(sh, obj);
-//            // fall through!
-//
-//        case OK_SEE_THROUGH:
-//        case OK_SLS:
-//            next = nextPtrFromSeg(sh, obj);
-//    }
-//
-//    // sort objects by offset
-//    typedef std::vector<FieldWrapper>           TAtomList;
-//    typedef std::map<TOffset, TAtomList>        TAtomByOff;
-//    TAtomByOff objByOff;
-//    for (const FldHandle &fld : liveFields) {
-//        EFieldClass code;
-//        if (fld == next)
-//            code = FC_NEXT;
-//        else if (fld == prev)
-//            code = FC_PREV;
-//        else if (isDataPtr(fld.type()))
-//            code = FC_PTR;
-//        else
-//            code = FC_DATA;
-//
-//        const TOffset off = fld.offset();
-//        FieldWrapper fw(fld, code);
-//        objByOff[off].push_back(fw);
-//    }
-//
-//    // plot all atomic objects inside
-//    for (TAtomByOff::const_reference item : objByOff) {
-//        const TOffset off = item.first;
-//        for (const FieldWrapper &fw : /* TAtomList */ item.second) {
-//            // plot a single object
-//            if (!plotField(plot, fw, /* lonely */ false))
-//                continue;
-//
-//            // connect the field with the object by an offset edge
-//            plotOffset(plot, off, obj, fw.fld.fieldId());
-//        }
-//    }
-//}
-//
-//std::string labelOfCompObj(const SymHeap &sh, const TObjId obj, bool showProps)
-//{
-//    std::ostringstream label;
-//    const TProtoLevel protoLevel= sh.objProtoLevel(obj);
-//    if (protoLevel)
-//        label << "[L" << protoLevel << " prototype] ";
-//
-//    const EObjKind kind = sh.objKind(obj);
-//    switch (kind) {
-//        case OK_REGION:
-//            return label.str();
-//
-//        case OK_OBJ_OR_NULL:
-//        case OK_SEE_THROUGH:
-//        case OK_SEE_THROUGH_2N:
-//            label << "0..1";
-//            break;
-//
-//        case OK_SLS:
-//            label << "SLS";
-//            break;
-//
-//        case OK_DLS:
-//            label << "DLS";
-//            break;
-//    }
-//
-//    switch (kind) {
-//        case OK_SLS:
-//        case OK_DLS:
-//            // append minimal segment length
-//            label << " " << sh.segMinLength(obj) << "+";
-//
-//        default:
-//            break;
-//    }
-//
-//    if (showProps && OK_OBJ_OR_NULL != kind) {
-//        const BindingOff &bf = sh.segBinding(obj);
-//        switch (kind) {
-//            case OK_SLS:
-//            case OK_DLS:
-//                label << ", head [" << SIGNED_OFF(bf.head) << "]";
-//
-//            default:
-//                break;
-//        }
-//
-//        switch (kind) {
-//            case OK_SEE_THROUGH:
-//            case OK_SLS:
-//            case OK_DLS:
-//                label << ", next [" << SIGNED_OFF(bf.next) << "]";
-//
-//            default:
-//                break;
-//        }
-//
-//        if (OK_DLS == kind)
-//            label << ", prev [" << SIGNED_OFF(bf.prev) << "]";
-//    }
-//
-//    return label.str();
 //}
 //
 //
@@ -1120,63 +766,38 @@ bool /* anyChange */ MyHeapCrawler::digVal(const TValId val)
 // SEPARATOR
 // SEPARATOR
 
-#define GEN_labelByCode(cst) case cst: return #cst
 
-#define SL_QUOTE(what) "\"" << what << "\""
+enum EFieldClass {
+    FC_VOID = 0,
+    FC_PTR,
+    FC_NEXT,
+    FC_PREV,
+    FC_DATA
+};
 
-inline const char* myOffPrefix(const TOffset off)
-{
-    return (off < 0)
-        ? ""
-        : "+";
-}
+struct FieldWrapper {
+    FldHandle       fld;
+    EFieldClass     code;
 
-#define SIGNED_OFF(off) myOffPrefix(off) << (off)
-
-const char* myLabelByOrigin(const EValueOrigin code)
-{
-    switch (code) {
-        GEN_labelByCode(VO_INVALID);
-        GEN_labelByCode(VO_ASSIGNED);
-        GEN_labelByCode(VO_UNKNOWN);
-        GEN_labelByCode(VO_REINTERPRET);
-        GEN_labelByCode(VO_DEREF_FAILED);
-        GEN_labelByCode(VO_STACK);
-        GEN_labelByCode(VO_HEAP);
+    FieldWrapper():
+        code(FC_VOID)
+    {
     }
 
-    CL_BREAK_IF("invalid call of myLabelByOrigin()");
-    return "";
-}
-
-const char* myLabelByTarget(const EValueTarget code)
-{
-    switch (code) {
-        GEN_labelByCode(VT_INVALID);
-        GEN_labelByCode(VT_UNKNOWN);
-        GEN_labelByCode(VT_COMPOSITE);
-        GEN_labelByCode(VT_CUSTOM);
-        GEN_labelByCode(VT_OBJECT);
-        GEN_labelByCode(VT_RANGE);
+    FieldWrapper(const FldHandle &obj_, EFieldClass code_):
+        fld(obj_),
+        code(code_)
+    {
     }
 
-    CL_BREAK_IF("invalid call of myLabelByTarget()");
-    return "";
-}
-
-const char* myLabelByTargetSpec(const ETargetSpecifier code)
-{
-    switch (code) {
-        GEN_labelByCode(TS_INVALID);
-        GEN_labelByCode(TS_REGION);
-        GEN_labelByCode(TS_FIRST);
-        GEN_labelByCode(TS_LAST);
-        GEN_labelByCode(TS_ALL);
+    FieldWrapper(const FldHandle &obj_):
+        fld(obj_),
+        code(isDataPtr(fld.type())
+            ? FC_PTR
+            : FC_DATA)
+    {
     }
-
-    CL_BREAK_IF("invalid call of myLabelByTargetSpec()");
-    return "";
-}
+};
 
 struct PTAData {
     typedef std::pair<TObjId, TOffset>                      TFieldKey;
@@ -1210,6 +831,171 @@ struct PTAData {
     }
 };
 
+class CltFinder {
+    private:
+        const TObjType          cltRoot_;
+        const TObjType          cltToSeek_;
+        const TOffset           offToSeek_;
+        TFieldIdxChain          icFound_;
+
+    public:
+        CltFinder(TObjType cltRoot, TObjType cltToSeek, TOffset offToSeek):
+            cltRoot_(cltRoot),
+            cltToSeek_(cltToSeek),
+            offToSeek_(offToSeek)
+        {
+        }
+
+        const TFieldIdxChain& icFound() const { return icFound_; }
+
+        bool operator()(const TFieldIdxChain &ic, const struct cl_type_item *it)
+        {
+            const TObjType clt = it->type;
+            if (clt != cltToSeek_)
+                return /* continue */ true;
+
+            const TOffset off = offsetByIdxChain(cltRoot_, ic);
+            if (offToSeek_ != off)
+                return /* continue */ true;
+
+            // matched!
+            icFound_ = ic;
+            return false;
+        }
+};
+
+
+#define GEN_labelByCode(cst) case cst: return #cst
+
+#define SL_QUOTE(what) "\"" << what << "\""
+
+inline const char* myOffPrefix(const TOffset off)
+{
+    return (off < 0)
+        ? ""
+        : "+";
+}
+
+#define SIGNED_OFF(off) myOffPrefix(off) << (off)
+
+std::string myLabelOfCompObj(const SymHeap &sh, const TObjId obj, bool showProps)
+{
+    std::ostringstream label;
+    const TProtoLevel protoLevel= sh.objProtoLevel(obj);
+    if (protoLevel)
+        label << "[L" << protoLevel << " prototype] ";
+
+    const EObjKind kind = sh.objKind(obj);
+    switch (kind) {
+        case OK_REGION:
+            return label.str();
+
+        case OK_OBJ_OR_NULL:
+        case OK_SEE_THROUGH:
+        case OK_SEE_THROUGH_2N:
+            label << "0..1";
+            break;
+
+        case OK_SLS:
+            label << "SLS";
+            break;
+
+        case OK_DLS:
+            label << "DLS";
+            break;
+    }
+
+    switch (kind) {
+        case OK_SLS:
+        case OK_DLS:
+            // append minimal segment length
+            label << " " << sh.segMinLength(obj) << "+";
+
+        default:
+            break;
+    }
+
+    if (showProps && OK_OBJ_OR_NULL != kind) {
+        const BindingOff &bf = sh.segBinding(obj);
+        switch (kind) {
+            case OK_SLS:
+            case OK_DLS:
+                label << ", head [" << SIGNED_OFF(bf.head) << "]";
+
+            default:
+                break;
+        }
+
+        switch (kind) {
+            case OK_SEE_THROUGH:
+            case OK_SLS:
+            case OK_DLS:
+                label << ", next [" << SIGNED_OFF(bf.next) << "]";
+
+            default:
+                break;
+        }
+
+        if (OK_DLS == kind)
+            label << ", prev [" << SIGNED_OFF(bf.prev) << "]";
+    }
+
+    return label.str();
+}
+
+bool myDigIcByOffset(
+        TFieldIdxChain                  *pDst,
+        const TObjType                  cltRoot,
+        const TObjType                  cltField,
+        const TOffset                   offRoot)
+{
+    CL_BREAK_IF(!cltRoot || !cltField);
+    if (!offRoot && (*cltRoot == *cltField))
+        // the root matches --> no fields on the way
+        return false;
+
+    CltFinder visitor(cltRoot, cltField, offRoot);
+    if (traverseTypeIc(cltRoot, visitor, /* digOnlyComposite */ true))
+        // not found
+        return false;
+
+    *pDst = visitor.icFound();
+    return true;
+}
+
+
+void extractUniformBlocks(PTAData &ptadata, const TObjId obj)
+{
+    SymHeap &sh = ptadata.sh;
+
+    // get all uniform blocks inside the given object
+    TUniBlockMap bMap;
+    sh.gatherUniformBlocks(bMap, obj);
+
+    // plot all uniform blocks
+    for (TUniBlockMap::const_reference item : bMap) {
+        const UniformBlock &bl = item.second;
+
+        // plot block node
+        const int id = ++ptadata.last;
+        ptadata.out << "\t" << SL_QUOTE("lonely" << id)
+            << " [shape=box, color=blue, fontcolor=blue, label=\"UNIFORM_BLOCK "
+            << bl.size << "B\"];\n";
+
+        // plot offset edge
+        const TOffset off = bl.off;
+        CL_BREAK_IF(off < 0);
+        ptadata.out << "\t" << SL_QUOTE(obj)
+            << " -> " << SL_QUOTE("lonely" << id)
+            << " [color=black, fontcolor=black, label=\"[+"
+            << off << "]\"];\n";
+
+        // schedule hasValue edge
+        const PTAData::TDangVal dv(id, bl.tplValue);
+        ptadata.dangVals.push_back(dv);
+    }
+}
+
 void describeFieldPlacement(PTAData &ptadata, const FldHandle &fld, TObjType clt)
 {
     const TObjType cltField = fld.type();
@@ -1221,7 +1007,7 @@ void describeFieldPlacement(PTAData &ptadata, const FldHandle &fld, TObjType clt
     const TOffset off = fld.offset();
 
     TFieldIdxChain ic;
-    if (!digIcByOffset(&ic, clt, cltField, off))
+    if (!myDigIcByOffset(&ic, clt, cltField, off))
         // type of the field not found in clt
         return;
 
@@ -1250,6 +1036,51 @@ void describeFieldPlacement(PTAData &ptadata, const FldHandle &fld, TObjType clt
     }
 }
 
+void describeVarCore(int *pInst, PTAData &ptadata, const TObjId obj)
+{
+    SymHeap &sh = ptadata.sh;
+    TStorRef stor = sh.stor();
+
+    CallInst ci(-1, -1);
+    if (sh.isAnonStackObj(obj, &ci)) {
+        // anonymous stack object
+        ptadata.out << "STACK of ";
+        if (-1 == ci.uid)
+            ptadata.out << "FNC_INVALID";
+        else
+            ptadata.out << nameOf(*stor.fncs[ci.uid]) << "()";
+        *pInst = ci.inst;
+    }
+    else {
+        // var lookup
+        const CVar cv = sh.cVarByObject(obj);
+        ptadata.out << "CL" << varToString(stor, cv.uid);
+        //const CodeStorage::Var &var = stor.vars[cv.uid];
+	//llvm::errs() << "foo: " << *((llvm::Value*) var.llvmValue);
+	//llvm::errs() << "bar: " << *((llvm::Instruction*) var.loc.llvm_insn);
+        *pInst = cv.inst;
+    }
+}
+
+void describeVar(PTAData &ptadata, const TObjId obj)
+{
+    if (OBJ_RETURN == obj) {
+        ptadata.out << "OBJ_RETURN";
+        return;
+    }
+
+    int inst;
+    if (ptadata.sh.isValid(obj))
+        describeVarCore(&inst, ptadata, obj);
+    else
+        inst = -1;
+
+    ptadata.out << " [obj = #" << obj;
+    if (1 < inst)
+        ptadata.out << ", inst = " << inst;
+    ptadata.out << "]";
+}
+
 void describeField(PTAData &ptadata, const FldHandle &fld, const bool lonely)
 {
     SymHeap &sh = ptadata.sh;
@@ -1269,38 +1100,6 @@ void describeField(PTAData &ptadata, const FldHandle &fld, const bool lonely)
     ptadata.out << " " << tag << "#" << fld.fieldId();
 }
 
-void myPrintRawInt(
-        std::ostream                &str,
-        const IR::TInt               i,
-        const char                  *suffix = "")
-{
-    if (IR::IntMin == i)
-        str << "-inf";
-    else if (IR::IntMax == i)
-        str << "inf";
-    else
-        str << i;
-
-    str << suffix;
-}
-
-void myPrintRawRange(
-        std::ostream                &str,
-        const IR::Range             &rng,
-        const char                  *suffix = "")
-{
-    if (isSingular(rng)) {
-        str << rng.lo << suffix;
-        return;
-    }
-
-    myPrintRawInt(str, rng.lo, suffix);
-    str << " .. ";
-    myPrintRawInt(str, rng.hi, suffix);
-
-    if (isAligned(rng))
-        str << ", alignment = " << rng.alignment << suffix;
-}
 
 bool extractField(PTAData &ptadata, const FieldWrapper &fw, const bool lonely)
 {
@@ -1369,6 +1168,198 @@ bool extractField(PTAData &ptadata, const FieldWrapper &fw, const bool lonely)
 
     ptadata.out << "\"];\n";
     return true;
+}
+
+void extractOffset(PTAData &ptadata, const TOffset off, const int from, const int to)
+{
+    const char *color = (off < 0)
+        ? "red"
+        : "black";
+
+    ptadata.out << "\t"
+        << SL_QUOTE(from) << " -> " << SL_QUOTE(to)
+        << " [color=" << color
+        << ", fontcolor=" << color
+        << ", label=\"[" << SIGNED_OFF(off)
+        << "]\"];\n";
+}
+
+
+template <class TCont>
+void extractFields(PTAData &ptadata, const TObjId obj, const TCont &liveFields)
+{
+    SymHeap &sh = ptadata.sh;
+
+    FldHandle next;
+    FldHandle prev;
+
+    const EObjKind kind = sh.objKind(obj);
+    switch (kind) {
+        case OK_REGION:
+        case OK_OBJ_OR_NULL:
+            break;
+
+        case OK_DLS:
+        case OK_SEE_THROUGH_2N:
+            prev = prevPtrFromSeg(sh, obj);
+            // fall through!
+
+        case OK_SEE_THROUGH:
+        case OK_SLS:
+            next = nextPtrFromSeg(sh, obj);
+    }
+
+    // sort objects by offset
+    typedef std::vector<FieldWrapper>           TAtomList;
+    typedef std::map<TOffset, TAtomList>        TAtomByOff;
+    TAtomByOff objByOff;
+    for (const FldHandle &fld : liveFields) {
+        EFieldClass code;
+        if (fld == next)
+            code = FC_NEXT;
+        else if (fld == prev)
+            code = FC_PREV;
+        else if (isDataPtr(fld.type()))
+            code = FC_PTR;
+        else
+            code = FC_DATA;
+
+        const TOffset off = fld.offset();
+        FieldWrapper fw(fld, code);
+        objByOff[off].push_back(fw);
+    }
+
+    // plot all atomic objects inside
+    for (TAtomByOff::const_reference item : objByOff) {
+        const TOffset off = item.first;
+        for (const FieldWrapper &fw : /* TAtomList */ item.second) {
+            // plot a single object
+            if (!extractField(ptadata, fw, /* lonely */ false))
+                continue;
+
+            // connect the field with the object by an offset edge
+            extractOffset(ptadata, off, obj, fw.fld.fieldId());
+        }
+    }
+}
+
+
+const char* myLabelByOrigin(const EValueOrigin code)
+{
+    switch (code) {
+        GEN_labelByCode(VO_INVALID);
+        GEN_labelByCode(VO_ASSIGNED);
+        GEN_labelByCode(VO_UNKNOWN);
+        GEN_labelByCode(VO_REINTERPRET);
+        GEN_labelByCode(VO_DEREF_FAILED);
+        GEN_labelByCode(VO_STACK);
+        GEN_labelByCode(VO_HEAP);
+    }
+
+    CL_BREAK_IF("invalid call of myLabelByOrigin()");
+    return "";
+}
+
+const char* myLabelByTarget(const EValueTarget code)
+{
+    switch (code) {
+        GEN_labelByCode(VT_INVALID);
+        GEN_labelByCode(VT_UNKNOWN);
+        GEN_labelByCode(VT_COMPOSITE);
+        GEN_labelByCode(VT_CUSTOM);
+        GEN_labelByCode(VT_OBJECT);
+        GEN_labelByCode(VT_RANGE);
+    }
+
+    CL_BREAK_IF("invalid call of myLabelByTarget()");
+    return "";
+}
+
+const char* myLabelByTargetSpec(const ETargetSpecifier code)
+{
+    switch (code) {
+        GEN_labelByCode(TS_INVALID);
+        GEN_labelByCode(TS_REGION);
+        GEN_labelByCode(TS_FIRST);
+        GEN_labelByCode(TS_LAST);
+        GEN_labelByCode(TS_ALL);
+    }
+
+    CL_BREAK_IF("invalid call of myLabelByTargetSpec()");
+    return "";
+}
+
+void myPrintRawInt(
+        std::ostream                &str,
+        const IR::TInt               i,
+        const char                  *suffix = "")
+{
+    if (IR::IntMin == i)
+        str << "-inf";
+    else if (IR::IntMax == i)
+        str << "inf";
+    else
+        str << i;
+
+    str << suffix;
+}
+
+void myPrintRawRange(
+        std::ostream                &str,
+        const IR::Range             &rng,
+        const char                  *suffix = "")
+{
+    if (isSingular(rng)) {
+        str << rng.lo << suffix;
+        return;
+    }
+
+    myPrintRawInt(str, rng.lo, suffix);
+    str << " .. ";
+    myPrintRawInt(str, rng.hi, suffix);
+
+    if (isAligned(rng))
+        str << ", alignment = " << rng.alignment << suffix;
+}
+
+const char* myLabelByStorClass(const EStorageClass code)
+{
+    switch (code) {
+        GEN_labelByCode(SC_INVALID);
+        GEN_labelByCode(SC_UNKNOWN);
+        GEN_labelByCode(SC_STATIC);
+        GEN_labelByCode(SC_ON_HEAP);
+        GEN_labelByCode(SC_ON_STACK);
+    }
+
+    CL_BREAK_IF("invalid call of myLabelByStorClass()");
+    return "";
+}
+
+void extractRawObject(PTAData &ptadata, const TObjId obj, const char *color)
+{
+    SymHeap &sh = ptadata.sh;
+    const TSizeRange size = sh.objSize(obj);
+
+    const bool isValid = sh.isValid(obj);
+    if (!isValid)
+        color = "red";
+
+    ptadata.out << "\t" << SL_QUOTE(obj)
+        << " [shape=box";
+
+    if (!sh.isValid(obj))
+        ptadata.out << "[INVALID] ";
+
+    const EStorageClass code = sh.objStorClass(obj);
+    if (isProgramVar(code))
+        describeVar(ptadata, obj);
+    else
+        ptadata.out << "#" << obj;
+
+    ptadata.out << " [" << myLabelByStorClass(code) << ", size = ";
+    myPrintRawRange(ptadata.out, size, " B");
+    ptadata.out << "]\"];\n";
 }
 
 
@@ -1449,7 +1440,7 @@ void extractCompositeObj(PTAData &ptadata, const TObjId obj, const TCont &liveFi
             break;
     }
 
-    const std::string label = labelOfCompObj(sh, obj, /* showProps */ true);
+    const std::string label = myLabelOfCompObj(sh, obj, /* showProps */ true);
 
     // open cluster
     ptadata.out
@@ -1459,10 +1450,10 @@ void extractCompositeObj(PTAData &ptadata, const TObjId obj, const TCont &liveFi
     extractRawObject(ptadata, obj, color);
 
     // plot all uniform blocks
-    plotUniformBlocks(ptadata, obj);
+    extractUniformBlocks(ptadata, obj);
 
     // plot all atomic objects inside
-    plotFields(ptadata, obj, liveFields);
+    extractFields(ptadata, obj, liveFields);
 
     // close cluster
     ptadata.out << "}\n";
@@ -1484,23 +1475,8 @@ void extractObjects(PTAData &ptadata)
             // this one went out in a simplified form
             continue;
 
-        extractCompositeObj(plot, obj, liveFields);
+        extractCompositeObj(ptadata, obj, liveFields);
     }
-}
-
-
-void extractOffset(PTAData &ptadata, const TOffset off, const int from, const int to)
-{
-    const char *color = (off < 0)
-        ? "red"
-        : "black";
-
-    ptadata.out << "\t"
-        << SL_QUOTE(from) << " -> " << SL_QUOTE(to)
-        << " [color=" << color
-        << ", fontcolor=" << color
-        << ", label=\"[" << SIGNED_OFF(off)
-        << "]\"];\n";
 }
 
 void extractSingleValue(PTAData &ptadata, const TValId val)
