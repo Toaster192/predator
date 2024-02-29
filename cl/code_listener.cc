@@ -50,6 +50,7 @@ const struct cl_loc cl_loc_unknown = {
     0,  // .line
     0,  // .column
     0,  // .sysp
+    0,  // .llvm_insn
 };
 
 const struct cl_loc* cl_loc_fallback(

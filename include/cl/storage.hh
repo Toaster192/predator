@@ -103,7 +103,7 @@ struct Var {
     /**
      * Used to pass an llvm value pointer to sl.
      */
-    //void                        *llvmValue;
+    void                        *llvmValue;
 
     /**
      * true if there is at least one instruction in the program that takes an

@@ -71,7 +71,7 @@ add_library(predator STATIC
     symgc.cc
     symheap.cc
     symjoin.cc
-    extract_pta.cc
+    smg2json.cc
     symplot.cc
     symproc.cc
     symseg.cc

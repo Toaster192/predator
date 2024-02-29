@@ -23,6 +23,11 @@
 #include <set>
 #include <string>
 
+#include "json.hpp"
+
+
+using json = nlohmann::json;
+
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of MyHeapCrawler
 class MyHeapCrawler {
@@ -809,7 +814,7 @@ struct PTAData {
     std::ostream                       &out;
     const TObjSet                      &objs;
     const TValSet                      &values;
-    const TIdSet                       *pHighlight;
+    json                                j;
     int                                 last;
     TLiveFields                         liveFields;
     TFldSet                             lonelyFields;
@@ -819,13 +824,11 @@ struct PTAData {
             const SymHeap              &sh_,
             std::ostream               &out_,
             const TObjSet              &objs_,
-            const TValSet              &values_,
-            const TIdSet               *pHighlight_):
+            const TValSet              &values_):
         sh(const_cast<SymHeap &>(sh_)),
         out(out_),
         objs(objs_),
         values(values_),
-        pHighlight(pHighlight_),
         last(0)
     {
     }
@@ -1043,8 +1046,7 @@ void describeVarCore(int *pInst, PTAData &ptadata, const TObjId obj)
 
     CallInst ci(-1, -1);
     if (sh.isAnonStackObj(obj, &ci)) {
-        // anonymous stack object
-        ptadata.out << "STACK of ";
+        // anonymous stack object ptadata.out << "STACK of ";
         if (-1 == ci.uid)
             ptadata.out << "FNC_INVALID";
         else
@@ -1055,9 +1057,6 @@ void describeVarCore(int *pInst, PTAData &ptadata, const TObjId obj)
         // var lookup
         const CVar cv = sh.cVarByObject(obj);
         ptadata.out << "CL" << varToString(stor, cv.uid);
-        //const CodeStorage::Var &var = stor.vars[cv.uid];
-	//llvm::errs() << "foo: " << *((llvm::Value*) var.llvmValue);
-	//llvm::errs() << "bar: " << *((llvm::Instruction*) var.loc.llvm_insn);
         *pInst = cv.inst;
     }
 }
@@ -1172,15 +1171,9 @@ bool extractField(PTAData &ptadata, const FieldWrapper &fw, const bool lonely)
 
 void extractOffset(PTAData &ptadata, const TOffset off, const int from, const int to)
 {
-    const char *color = (off < 0)
-        ? "red"
-        : "black";
-
     ptadata.out << "\t"
         << SL_QUOTE(from) << " -> " << SL_QUOTE(to)
-        << " [color=" << color
-        << ", fontcolor=" << color
-        << ", label=\"[" << SIGNED_OFF(off)
+        << " [label=\"[" << SIGNED_OFF(off)
         << "]\"];\n";
 }
 
@@ -1339,7 +1332,6 @@ const char* myLabelByStorClass(const EStorageClass code)
 void extractRawObject(PTAData &ptadata, const TObjId obj, const char *color)
 {
     SymHeap &sh = ptadata.sh;
-    const TSizeRange size = sh.objSize(obj);
 
     const bool isValid = sh.isValid(obj);
     if (!isValid)
@@ -1356,10 +1348,6 @@ void extractRawObject(PTAData &ptadata, const TObjId obj, const char *color)
         describeVar(ptadata, obj);
     else
         ptadata.out << "#" << obj;
-
-    ptadata.out << " [" << myLabelByStorClass(code) << ", size = ";
-    myPrintRawRange(ptadata.out, size, " B");
-    ptadata.out << "]\"];\n";
 }
 
 
@@ -1626,6 +1614,15 @@ void extractEverything(PTAData &ptadata)
     extractAddrs(ptadata);
     //plotHasValueEdges(plot);
     //plotNeqEdges(plot);
+    /*
+    SymHeap &sh = ptadata.sh;
+    TStorRef stor = sh.stor();
+    for (const TObjId obj : ptadata.objs) {
+        const CVar cv = sh.cVarByObject(obj);
+        const CodeStorage::Var &var = stor.vars[cv.uid];
+        llvm::errs() << "foo: " << *((llvm::Value*) var.llvmValue);
+    }
+    */
 }
 
 bool extractPTACore(
@@ -1634,8 +1631,7 @@ bool extractPTACore(
         const struct cl_loc             *loc,
         const TObjSet                   &objs,
         const TValSet                   &vals,
-        std::string                     *pName = 0,
-        const TIdSet                    *pHighlight = 0)
+        std::string                     *pName = 0)
 {
     PlotEnumerator *pe = PlotEnumerator::instance();
     std::string plotName(pe->decorate(name));
@@ -1652,9 +1648,6 @@ bool extractPTACore(
         return false;
     }
 
-    // open graph
-    out << "pta:\n";
-
     // check whether we can write to stream
     if (!out.flush()) {
         CL_ERROR("unable to write file '" << fileName << "'");
@@ -1668,8 +1661,9 @@ bool extractPTACore(
         CL_DEBUG("writing heap graph to '" << fileName << "'...");
 
     // initialize an instance of PlotData
-    PTAData ptadata(sh, out, objs, vals, pHighlight);
+    PTAData ptadata(sh, out, objs, vals);
 
+    //llvm::errs() << "bar: " << *((llvm::Instruction*) loc->llvm_insn);
     // do our stuff
     extractEverything(ptadata);
 

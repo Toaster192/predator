@@ -65,7 +65,7 @@ struct cl_loc {
     /**
      * Used to pass an llvm instruction pointer to sl.
      */
-    //void				*llvm_insn;
+    void				*llvm_insn;
 };
 
 /**
@@ -483,7 +483,7 @@ struct cl_var {
     /**
      * Used to pass an llvm value pointer to sl.
      */
-    //void				*llvm_val;
+    void				*llvm_val;
 };
 
 /**

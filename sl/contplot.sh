@@ -1,5 +1,5 @@
 #!/bin/sh
-export SL_OPTS=-fplugin-arg-libsl-args=detect_containers
+#export SL_OPTS=-fplugin-arg-libsl-args=detect_containers
 export SL_PLOT=1
 
 usage() {

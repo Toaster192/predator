@@ -27,8 +27,69 @@
  */
 
 #include "symheap.hh"
+#include "worklist.hh"
+#include <cl/clutil.hh>
 
 #include <string>
+
+class HeapCrawler {
+    public:
+        HeapCrawler(const SymHeap &sh, const bool digForward = true):
+            sh_(const_cast<SymHeap &>(sh)),
+            digForward_(digForward)
+        {
+        }
+
+        bool /* anyChange */ digObj(const TObjId);
+        bool /* anyChange */ digVal(const TValId);
+
+        const TObjSet objs() const { return objs_; }
+        const TValSet vals() const { return vals_; }
+
+    private:
+        void digFields(const TObjId of);
+        void operate();
+
+    private:
+        SymHeap                    &sh_;
+        WorkList<TValId>            wl_;
+        bool                        digForward_;
+        TObjSet                     objs_;
+        TValSet                     vals_;
+};
+
+enum EFieldClass {
+    FC_VOID = 0,
+    FC_PTR,
+    FC_NEXT,
+    FC_PREV,
+    FC_DATA
+};
+
+struct FieldWrapper {
+    FldHandle       fld;
+    EFieldClass     code;
+
+    FieldWrapper():
+        code(FC_VOID)
+    {
+    }
+
+    FieldWrapper(const FldHandle &obj_, EFieldClass code_):
+        fld(obj_),
+        code(code_)
+    {
+    }
+
+    FieldWrapper(const FldHandle &obj_):
+        fld(obj_),
+        code(isDataPtr(fld.type())
+            ? FC_PTR
+            : FC_DATA)
+    {
+    }
+};
+
 
 typedef std::set<int>                   TIdSet;
 
