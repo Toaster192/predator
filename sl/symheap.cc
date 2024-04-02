@@ -629,6 +629,7 @@ struct SymHeapCore::Private {
     CustomValueMapper              *cValueMap;
     CoincidenceDb                  *coinDb;
     NeqDb                          *neqDb;
+    std::map<TObjId, const cl_loc*> *objLocMap;
 
     inline TFldId assignId(BlockEntity *);
     inline TValId assignId(BaseValue *);
@@ -1523,7 +1524,8 @@ SymHeapCore::Private::Private(Trace::Node *trace):
     cVarMap     (new CVarMap),
     cValueMap   (new CustomValueMapper),
     coinDb      (new CoincidenceDb),
-    neqDb       (new NeqDb)
+    neqDb       (new NeqDb),
+    objLocMap   (new std::map<TObjId, const cl_loc*>)
 {
 }
 
@@ -1535,7 +1537,8 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     cVarMap     (ref.cVarMap),
     cValueMap   (ref.cValueMap),
     coinDb      (ref.coinDb),
-    neqDb       (ref.neqDb)
+    neqDb       (ref.neqDb),
+    objLocMap   (ref.objLocMap)
 {
     RefCntLib<RCO_NON_VIRT>::enter(this->liveObjs);
     RefCntLib<RCO_NON_VIRT>::enter(this->cVarMap);
@@ -3626,6 +3629,21 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin)
     }
 
     return d->valCreate(code, origin);
+}
+
+int SymHeapCore::getLocCount(){
+    return d->objLocMap->size();
+}
+
+void SymHeapCore::setObjLoc(TObjId obj, const cl_loc* loc){
+   (*d->objLocMap)[obj] = loc;
+}
+
+const cl_loc* SymHeapCore::getObjLoc(TObjId obj){
+    if ((*d->objLocMap).count(obj)){
+        return (*d->objLocMap)[obj];
+    }
+    return nullptr;
 }
 
 TValId SymHeapCore::valWrapCustom(CustomValue cVal)

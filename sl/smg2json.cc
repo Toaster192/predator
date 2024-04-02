@@ -350,7 +350,21 @@ json jsonifyRawObject(SMGData &data, const TObjId obj)
     if (isProgramVar(code)){
         j["value"] = describeVar(data, obj);
     }else{
-        j["value"] = obj;
+        const cl_loc* loc = sh.getObjLoc(obj);
+        if(loc){
+            json loc_j;
+            loc_j["file"] = loc->file;
+            loc_j["line"] = loc->line;
+            loc_j["column"] = loc->column;
+            if (loc->llvm_insn){
+                std::string str;
+                llvm::raw_string_ostream ss(str);
+                ss << *((llvm::Instruction*) loc->llvm_insn);
+                loc_j["insn"] = ss.str();
+            }
+
+            j["loc"] = loc_j;
+        }
     }
 
     j["size_low"] = size.lo;
@@ -740,6 +754,22 @@ void jsonifySingleValue(SMGData &data, const TValId val)
             j["targetSpecLabel"] = getTargetSpecStr(ts);
 
         j["obj"] = obj;
+
+        const cl_loc* loc = sh.getObjLoc(obj);
+        if(loc){
+            json loc_j;
+            loc_j["file"] = loc->file;
+            loc_j["line"] = loc->line;
+            loc_j["column"] = loc->column;
+            if (loc->llvm_insn){
+                std::string str;
+                llvm::raw_string_ostream ss(str);
+                ss << *((llvm::Instruction*) loc->llvm_insn);
+                loc_j["insn"] = ss.str();
+            }
+
+            j["loc"] = loc_j;
+        }
     }
 
     data.j["values"] += j;

@@ -555,6 +555,12 @@ class SymHeapCore {
         /// allocate a chunk of heap of known size
         TObjId heapAlloc(const TSizeRange &size);
 
+        int getLocCount();
+
+        void setObjLoc(TObjId obj, const cl_loc* loc);
+
+        const cl_loc* getObjLoc(TObjId obj);
+
         /// return true if the given object can be still accessed safely
         bool isValid(TObjId) const;
 
