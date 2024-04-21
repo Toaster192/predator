@@ -559,7 +559,8 @@ class SymHeapCore {
 
         void setObjLoc(TObjId obj, const cl_loc* loc);
 
-        const cl_loc* getObjLoc(TObjId obj);
+        void setObjLoc(TObjId, cl_loc);
+        cl_loc getObjLoc(TObjId) const;
 
         /// return true if the given object can be still accessed safely
         bool isValid(TObjId) const;

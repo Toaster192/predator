@@ -176,6 +176,10 @@ TObjId /* objDst */ addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc)
     // create the object in 'dst'
     const TSizeRange size = src.objSize(objSrc);
     const TObjId objDst = dst.heapAlloc(size);
+
+    const cl_loc loc = src.getObjLoc(objSrc);
+    dst.setObjLoc(objDst, loc);
+
     if (!valid)
         dst.objInvalidate(objDst);
 

@@ -350,16 +350,16 @@ json jsonifyRawObject(SMGData &data, const TObjId obj)
     if (isProgramVar(code)){
         j["value"] = describeVar(data, obj);
     }else{
-        const cl_loc* loc = sh.getObjLoc(obj);
-        if(loc){
+        const cl_loc loc = sh.getObjLoc(obj);
+        if(loc.file){
             json loc_j;
-            loc_j["file"] = loc->file;
-            loc_j["line"] = loc->line;
-            loc_j["column"] = loc->column;
-            if (loc->llvm_insn){
+            loc_j["file"] = loc.file;
+            loc_j["line"] = loc.line;
+            loc_j["column"] = loc.column;
+            if (loc.llvm_insn){
                 std::string str;
                 llvm::raw_string_ostream ss(str);
-                ss << *((llvm::Instruction*) loc->llvm_insn);
+                ss << *((llvm::Instruction*) loc.llvm_insn);
                 loc_j["insn"] = ss.str();
             }
 
@@ -492,31 +492,30 @@ void jsonifyFields(SMGData &data, const TObjId obj, const TCont &liveFields, jso
     }
 }
 
-std::string getLabelOfCompObjStr(const SymHeap &sh, const TObjId obj, bool showProps)
+void getCompObjDataJson(const SymHeap &sh, const TObjId obj, json &out)
 {
-    std::ostringstream label;
     const TProtoLevel protoLevel= sh.objProtoLevel(obj);
     if (protoLevel)
-        label << "[L" << protoLevel << " prototype] ";
+        out["protolevel"] = (int) protoLevel;
 
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_REGION:
-            label << "region";
-            return label.str();
+            out["label"] = "region";
+            return;
 
         case OK_OBJ_OR_NULL:
         case OK_SEE_THROUGH:
         case OK_SEE_THROUGH_2N:
-            label << "0..1";
+            out["label"] = "0..1";
             break;
 
         case OK_SLS:
-            label << "SLS";
+            out["label"] = "SLS";
             break;
 
         case OK_DLS:
-            label << "DLS";
+            out["label"] = "DLS";
             break;
     }
 
@@ -524,18 +523,18 @@ std::string getLabelOfCompObjStr(const SymHeap &sh, const TObjId obj, bool showP
         case OK_SLS:
         case OK_DLS:
             // append minimal segment length
-            label << " " << sh.segMinLength(obj) << "+";
+            out["segMinLength"] = (int) sh.segMinLength(obj);
 
         default:
             break;
     }
 
-    if (showProps && OK_OBJ_OR_NULL != kind) {
+    if (OK_OBJ_OR_NULL != kind) {
         const BindingOff &bf = sh.segBinding(obj);
         switch (kind) {
             case OK_SLS:
             case OK_DLS:
-                label << ", head [" << SIGNED_OFF(bf.head) << "]";
+                out["headOffset"] = (int) bf.head;
 
             default:
                 break;
@@ -545,17 +544,15 @@ std::string getLabelOfCompObjStr(const SymHeap &sh, const TObjId obj, bool showP
             case OK_SEE_THROUGH:
             case OK_SLS:
             case OK_DLS:
-                label << ", next [" << SIGNED_OFF(bf.next) << "]";
+                out["nextOffset"] = (int) bf.next;
 
             default:
                 break;
         }
 
         if (OK_DLS == kind)
-            label << ", prev [" << SIGNED_OFF(bf.prev) << "]";
+            out["prevOffset"] = (int) bf.prev;
     }
-
-    return label.str();
 }
 
 template <class TCont>
@@ -563,9 +560,8 @@ void jsonifyCompositeObj(SMGData &data, const TObjId obj, const TCont &liveField
 {
     SymHeap &sh = data.sh;
 
-    const std::string label = getLabelOfCompObjStr(sh, obj, /* showProps */ true);
-
-    json j = {{"id", ++data.last}, {"label", label}, {"objects", json::array()}};
+    json j = {{"id", ++data.last}, {"objects", json::array()}};
+    getCompObjDataJson(sh, obj, j);
 
     j["objects"] += jsonifyRawObject(data, obj);
 
@@ -755,16 +751,16 @@ void jsonifySingleValue(SMGData &data, const TValId val)
 
         j["obj"] = obj;
 
-        const cl_loc* loc = sh.getObjLoc(obj);
-        if(loc){
+        const cl_loc loc = sh.getObjLoc(obj);
+        if(loc.file){
             json loc_j;
-            loc_j["file"] = loc->file;
-            loc_j["line"] = loc->line;
-            loc_j["column"] = loc->column;
-            if (loc->llvm_insn){
+            loc_j["file"] = loc.file;
+            loc_j["line"] = loc.line;
+            loc_j["column"] = loc.column;
+            if (loc.llvm_insn){
                 std::string str;
                 llvm::raw_string_ostream ss(str);
-                ss << *((llvm::Instruction*) loc->llvm_insn);
+                ss << *((llvm::Instruction*) loc.llvm_insn);
                 loc_j["insn"] = ss.str();
             }
 
@@ -1001,16 +997,6 @@ void jsonifyEverything(SMGData &data)
     jsonifyNeqEdges(data);
 }
 
-std::string getFuncName(const SymHeap &sh){
-    for (auto var : sh.stor().vars){
-        if (var.loc.llvm_insn){
-            llvm::Instruction *insn = ((llvm::Instruction*) var.loc.llvm_insn);
-            return insn->getFunction()->getName();
-        }
-    }
-    return "";
-}
-
 bool smg2jsonCore(
         const SymHeap                   &sh,
         const std::string               &name,
@@ -1062,7 +1048,17 @@ bool smg2jsonCore(
     data.j["compositeObjects"] = json::array();
     data.j["values"] = json::array();
     data.j["edges"] = json::array();
-    data.j["metadata"] = {{"func_name", getFuncName(sh)}};
+    /* in case the "__initglobvar" thing is not ideal
+    if (loc->line == 0){
+        data.j["metadata"] = {{"func_name", ""}};
+    } else {
+    */
+    if (loc->llvm_insn){
+        llvm::Instruction *insn = ((llvm::Instruction*) loc->llvm_insn);
+        data.j["metadata"] = {{"func_name", insn->getFunction()->getName()}};
+    } else {
+        data.j["metadata"] = {{"func_name", "unknown"}};
+    }
 
     // do our stuff
     jsonifyEverything(data);

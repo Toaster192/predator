@@ -30,7 +30,6 @@
 #include "symseg.hh"
 #include "util.hh"
 #include "worklist.hh"
-#include "smg2json.hh"
 
 #include <cctype>
 #include <fstream>
@@ -1272,9 +1271,6 @@ bool plotHeapCore(
     out << "}\n";
     const bool ok = !!out;
     out.close();
-
-    //extractPTA(sh, name, loc);
-    smg2json(sh, name, loc);
 
     return ok;
 }

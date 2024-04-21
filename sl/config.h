@@ -204,7 +204,7 @@
  * - 0 ... kill local variables only on stack frame destruction
  * - 1 ... kill local variables as soon as they become dead
  */
-#define SE_EARLY_VARS_DESTRUCTION           1
+#define SE_EARLY_VARS_DESTRUCTION           0
 
 /**
  * - 0 ... call cache completely disabled (saves a lot of memory)

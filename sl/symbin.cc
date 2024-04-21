@@ -514,7 +514,6 @@ bool handleMalloc(
     else
         CL_DEBUG_MSG(lw, "executing malloc(/* size given as int range */)");
 
-    CL_ERROR_MSG(lw, "malloc called smth");
     core.execHeapAlloc(dst, insn, size, /* nullified */ false);
     return true;
 }

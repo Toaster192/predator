@@ -168,7 +168,6 @@ class CVarMap {
         }
 };
 
-
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of CustomValue
 CustomValue::CustomValue():
@@ -527,6 +526,7 @@ struct Region: public AbstractHeapEntity {
     bool                            isValid;
     TProtoLevel                     protoLevel;
     TAddrByTS                       addrByTS;
+    struct cl_loc                   loc;
 
     Region(EStorageClass code_):
         code(code_),
@@ -535,6 +535,7 @@ struct Region: public AbstractHeapEntity {
         isValid(true),
         protoLevel(/* not a prototype */ 0)
     {
+        loc = {};
     }
 
     virtual AbstractHeapEntity* doClone() const {
@@ -629,7 +630,6 @@ struct SymHeapCore::Private {
     CustomValueMapper              *cValueMap;
     CoincidenceDb                  *coinDb;
     NeqDb                          *neqDb;
-    std::map<TObjId, const cl_loc*> *objLocMap;
 
     inline TFldId assignId(BlockEntity *);
     inline TValId assignId(BaseValue *);
@@ -1524,8 +1524,7 @@ SymHeapCore::Private::Private(Trace::Node *trace):
     cVarMap     (new CVarMap),
     cValueMap   (new CustomValueMapper),
     coinDb      (new CoincidenceDb),
-    neqDb       (new NeqDb),
-    objLocMap   (new std::map<TObjId, const cl_loc*>)
+    neqDb       (new NeqDb)
 {
 }
 
@@ -1537,8 +1536,7 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     cVarMap     (ref.cVarMap),
     cValueMap   (ref.cValueMap),
     coinDb      (ref.coinDb),
-    neqDb       (ref.neqDb),
-    objLocMap   (ref.objLocMap)
+    neqDb       (ref.neqDb)
 {
     RefCntLib<RCO_NON_VIRT>::enter(this->liveObjs);
     RefCntLib<RCO_NON_VIRT>::enter(this->cVarMap);
@@ -3565,11 +3563,25 @@ void SymHeapCore::objSetEstimatedType(TObjId obj, TObjType clt)
     rootData->lastKnownClt = clt;
 }
 
+void SymHeapCore::setObjLoc(TObjId obj, cl_loc loc)
+{
+    Region *rootData;
+    d->ents.getEntRW(&rootData, obj);
+    rootData->loc = loc;
+}
+
 TObjType SymHeapCore::objEstimatedType(TObjId obj) const
 {
     const Region *regData;
     d->ents.getEntRO(&regData, obj);
     return regData->lastKnownClt;
+}
+
+cl_loc SymHeapCore::getObjLoc(TObjId obj) const
+{
+    const Region *regData;
+    d->ents.getEntRO(&regData, obj);
+    return regData->loc;
 }
 
 void SymHeapCore::objInvalidate(TObjId obj)
@@ -3629,21 +3641,6 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin)
     }
 
     return d->valCreate(code, origin);
-}
-
-int SymHeapCore::getLocCount(){
-    return d->objLocMap->size();
-}
-
-void SymHeapCore::setObjLoc(TObjId obj, const cl_loc* loc){
-   (*d->objLocMap)[obj] = loc;
-}
-
-const cl_loc* SymHeapCore::getObjLoc(TObjId obj){
-    if ((*d->objLocMap).count(obj)){
-        return (*d->objLocMap)[obj];
-    }
-    return nullptr;
 }
 
 TValId SymHeapCore::valWrapCustom(CustomValue cVal)

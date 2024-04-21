@@ -1118,6 +1118,23 @@ bool joinObjType(
     return updateJoinStatus(ctx, JS_THREE_WAY);
 }
 
+bool joinObjLoc(
+        cl_loc                 *pDst,
+        SymJoinCtx              &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2)
+{
+    const cl_loc loc1 = ctx.sh1.getObjLoc(obj1);
+    const cl_loc loc2 = ctx.sh2.getObjLoc(obj2);
+
+    if (loc1.file == loc2.file && loc1.line == loc2.line && loc1.column == loc2.column) {
+        // full match (or good enough)
+        *pDst = loc1;
+        return true;
+    }
+    return false;
+}
+
 bool joinObjKind(
         EObjKind               *pDst,
         SymJoinCtx             &ctx,
@@ -1535,6 +1552,10 @@ bool joinObjects(
     if (!joinObjType(&clt, ctx, obj1, obj2))
         return false;
 
+    cl_loc loc;
+    if (!joinObjLoc(&loc, ctx, obj1, obj2))
+        return false;
+
     bool anon;
     CallInst from;
     if (!joinAnonStackObjs(&anon, &from, ctx, obj1, obj2))
@@ -1542,12 +1563,14 @@ bool joinObjects(
 
     if (!pObjDst)
         // do not create the object
-        return true;;
+        return true;
 
     // create an image in ctx.dst
     const TObjId objDst = (anon)
         ? ctx.dst.stackAlloc(size, from)
         : ctx.dst.heapAlloc(size);
+
+    ctx.dst.setObjLoc(objDst, loc);
 
     if (!joinUniBlocks(ctx, objDst, obj1, obj2))
         // failed to complement uniform blocks
@@ -1598,6 +1621,8 @@ TObjId /* objDst */ cloneObject(
     if (ctx.joiningData())
         // cloned object is always a prototype when joining data
         ctx.protos.insert(objDst);
+
+    ctx.dst.setObjLoc(objDst, shGt.getObjLoc(objGt));
 
     // initialize nesting level
     TProtoLevel protoLevel = shGt.objProtoLevel(objGt);
@@ -2685,6 +2710,8 @@ bool joinData(
     const BindingOff &bf = props.bOff;
     const TObjId objDst = ctx.dst.heapAlloc(size);
     ctx.dst.objSetAbstract(objDst, props.kind, bf);
+
+    ctx.dst.setObjLoc(objDst, ctx.sh1.getObjLoc(obj1));
 
     // intialize the minimum segment length
     const TMinLen lenDst = objMinLength(sh, obj1) + objMinLength(sh, obj2);
