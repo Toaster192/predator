@@ -1571,7 +1571,6 @@ void SymExecCore::execHeapAlloc(
     // store the result of malloc
     const TValId val = sh_.addrOfTarget(reg, TS_REGION);
     sh_.setObjLoc(reg, insn.loc);
-    CL_BREAK_IF("allocHeap smth() got called");
     this->setValueOf(lhs, val);
     this->killInsn(insn);
     dst.insert(sh_);
