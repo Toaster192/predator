@@ -51,7 +51,10 @@ Options::Options():
     stateLiveOrdering(SE_STATE_ON_THE_FLY_ORDERING),
     exitLeaks(SE_EXIT_LEAKS),
     detectContainers(false),
-    fixedPoint(0)
+    //fixedPoint(0),
+    //dump_json(false)
+    fixedPoint(new FixedPoint::StateByInsn),
+    dump_json(true)
 {
 }
 
@@ -83,6 +86,12 @@ void handleDumpFixedPoint(const string &name, const string &value)
         CL_BREAK_IF("we are leaking an instance of FixedPoint::StateByInsn");
 
     data.fixedPoint = new FixedPoint::StateByInsn;
+}
+
+void handleDumpJson(const string &name, const string &value)
+{
+    data.dump_json = true;
+    handleDumpFixedPoint(name, value);
 }
 
 void handleExitLeaks(const string &name, const string &value)
@@ -240,6 +249,7 @@ ConfigStringParser::ConfigStringParser()
     tbl_["allow_cyclic_trace_graph"]= handleAllowCyclicTraceGraph;
     tbl_["allow_three_way_join"]    = handleAllowThreeWayJoin;
     tbl_["dump_fixed_point"]        = handleDumpFixedPoint;
+    tbl_["dump_to_json"]            = handleDumpJson;
     tbl_["detect_containers"]       = handleDetectContainers;
     tbl_["error_label"]             = handleErrorLabel;
     tbl_["exit_leaks"]              = handleExitLeaks;

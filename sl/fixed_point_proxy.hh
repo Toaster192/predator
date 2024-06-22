@@ -44,6 +44,7 @@ namespace FixedPoint {
             const TStateMap& stateMap() const;
 
             void plotAll();
+            void toJson();
 
         private:
             struct Private;

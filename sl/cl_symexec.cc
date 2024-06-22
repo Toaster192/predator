@@ -179,7 +179,13 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *configString)
     FixedPoint::StateByInsn *const fixedPoint = GlConf::data.fixedPoint;
     if (fixedPoint) {
         // plot fixed-point
-        fixedPoint->plotAll();
+        if (GlConf::data.dump_json) {
+            fixedPoint->toJson();
+            // temp debug
+            fixedPoint->plotAll();
+        } else {
+            fixedPoint->plotAll();
+        }
         delete fixedPoint;
         printMemUsage("FixedPoint::StateByInsn::~StateByInsn");
     }

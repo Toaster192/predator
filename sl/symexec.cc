@@ -249,6 +249,7 @@ void SymExecEngine::execReturn()
     const SymHeap &origin = localState_[heapIdx_];
     SymHeap sh(origin);
 
+    /*
     char *dup = strdup(lw_->file);
     const char *fname = basename(dup);
     std::ostringstream plotName;
@@ -257,6 +258,7 @@ void SymExecEngine::execReturn()
     smg2json(sh, plotName.str(), lw_);
     plotHeap(sh, plotName.str(), lw_);
     free(dup);
+    */
 
     Trace::Node *trOrig = origin.traceNode();
     Trace::Node *trRet = new Trace::InsnNode(trOrig, insn, /* bin */ false);

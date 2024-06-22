@@ -30,6 +30,7 @@
 #include "glconf.hh"
 #include "symplot.hh"
 #include "symtrace.hh"
+#include "smg2json.hh"
 
 #include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
@@ -454,6 +455,60 @@ void StateByInsn::plotAll()
         CL_NOTE_MSG(loc, "plotting fixed-point of " << nameOf(*fnc) << "()...");
 
         plotFnc(fnc, d->stateByInsn);
+    }
+}
+
+void dumpInsn(
+        const TLocIdx               locIdx,
+        const LocalState           &locState,
+        std::string                 fncName)
+{
+    if (!locState.insn)
+        // an already removed insn
+        return;
+
+    // plot the root node
+    const SymState &state = locState.heapList;
+
+    const TInsn insn = locState.insn->clInsn();
+    const THeapIdx cntHeaps = state.size();
+    for (THeapIdx shIdx = 0; shIdx < cntHeaps; ++shIdx) {
+        const THeapIdent shIdent(locIdx, shIdx);
+        const SymHeap &sh = state[shIdx];
+
+        smg2json(sh, fncName, &insn->loc);
+    }
+}
+
+void dumpFncCore(const GlobalState &fncState, std::string fncName)
+{
+    const TLocIdx locCnt = fncState.size();
+    for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
+        const LocalState &locState = fncState[locIdx];
+        dumpInsn(locIdx, locState, fncName);
+    }
+}
+
+void dumpFnc(const TFnc fnc, StateByInsn::TStateMap &stateByInsn)
+{
+    const GlobalState *fncState = computeStateOf(fnc, stateByInsn);
+    const std::string fncName = nameOf(*fnc);
+    dumpFncCore(*fncState, fncName);
+    delete fncState;
+}
+
+void StateByInsn::toJson()
+{
+    if (d->visitedFncs.empty())
+        // nothing to plot
+        return;
+
+    for (TFncMap::const_reference fncItem : d->visitedFncs) {
+        const TFnc fnc = fncItem.second;
+        const TLoc loc = locationOf(*fnc);
+        CL_NOTE_MSG(loc, "dumping fixed-point of " << nameOf(*fnc) << "()...");
+
+        dumpFnc(fnc, d->stateByInsn);
     }
 }
 

@@ -1053,9 +1053,11 @@ bool smg2jsonCore(
         data.j["metadata"] = {{"func_name", ""}};
     } else {
     */
-    if (loc->llvm_insn){
+    if (loc && loc->llvm_insn){
         llvm::Instruction *insn = ((llvm::Instruction*) loc->llvm_insn);
-        data.j["metadata"] = {{"func_name", insn->getFunction()->getName()}};
+        data.j["metadata"] = {{"func_name", insn->getFunction()->getName()}, {"line", loc->line}, {"column", loc->column}};
+    } else if (loc){
+        data.j["metadata"] = {{"func_name", "unknown"}, {"line", loc->line}, {"column", loc->column}};
     } else {
         data.j["metadata"] = {{"func_name", "unknown"}};
     }

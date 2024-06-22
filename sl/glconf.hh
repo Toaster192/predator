@@ -47,6 +47,7 @@ struct Options {
     bool exitLeaks;         ///< @copydoc config.h::SE_EXIT_LEAKS
     bool detectContainers;  ///< detect containers and operations over them
     FixedPoint::StateByInsn *fixedPoint;  ///< fixed-point plotter (0 if unused)
+    bool dump_json;         ///< enable dumping to be in the json format
 
     Options();
 };
