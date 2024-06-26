@@ -1040,6 +1040,14 @@ bool smg2jsonCore(
         if (obj > maxId){
             maxId = obj;
         }
+        FldList liveFields;
+        sh.gatherLiveFields(liveFields, obj);
+        for (const FldHandle &fld : liveFields) {
+            int id = fld.fieldId();
+            if (id > maxId){
+                maxId = id;
+            }
+        }
     }
     // initialize an instance of SMGData
     SMGData data(sh, j, objs, vals, maxId);
@@ -1055,9 +1063,9 @@ bool smg2jsonCore(
     */
     if (loc && loc->llvm_insn){
         llvm::Instruction *insn = ((llvm::Instruction*) loc->llvm_insn);
-        data.j["metadata"] = {{"func_name", insn->getFunction()->getName()}, {"line", loc->line}, {"column", loc->column}};
+        data.j["metadata"] = {{"func_name", insn->getFunction()->getName()}, {"line", loc->line}, {"column", loc->column}, {"file", loc->file}};
     } else if (loc){
-        data.j["metadata"] = {{"func_name", "unknown"}, {"line", loc->line}, {"column", loc->column}};
+        data.j["metadata"] = {{"func_name", "unknown"}, {"line", loc->line}, {"column", loc->column}, {"file", loc->file}};
     } else {
         data.j["metadata"] = {{"func_name", "unknown"}};
     }
