@@ -1025,10 +1025,12 @@ bool smg2jsonCore(
         return false;
     }
 
+    /*
     if (loc)
         CL_NOTE_MSG(loc, "writing heap graph in json to '" << fileName << "'...");
     else
         CL_DEBUG("writing heap graph in json to '" << fileName << "'...");
+    */
 
     int maxId = 0;
     for (const TValId val : vals) {
