@@ -1132,6 +1132,12 @@ bool joinObjLoc(
         *pDst = loc1;
         return true;
     }
+    if (loc1.file && loc1.line && loc1.column) {
+        *pDst = loc1;
+    }
+    else if (loc2.file && loc2.line && loc2.column) {
+        *pDst = loc2;
+    }
     return false;
 }
 
@@ -1553,8 +1559,12 @@ bool joinObjects(
         return false;
 
     cl_loc loc;
+    joinObjLoc(&loc, ctx, obj1, obj2);
+    // TODO: investigate this, why can't this be blocking?
+    /*
     if (!joinObjLoc(&loc, ctx, obj1, obj2))
         return false;
+    */
 
     bool anon;
     CallInst from;
