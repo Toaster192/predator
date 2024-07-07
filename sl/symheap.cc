@@ -533,9 +533,9 @@ struct Region: public AbstractHeapEntity {
         size(IR::rngFromNum(0)),
         lastKnownClt(0),
         isValid(true),
-        protoLevel(/* not a prototype */ 0)
+        protoLevel(/* not a prototype */ 0),
+        loc({0,0,0,0,0})
     {
-        loc = {};
     }
 
     virtual AbstractHeapEntity* doClone() const {
@@ -3563,7 +3563,7 @@ void SymHeapCore::objSetEstimatedType(TObjId obj, TObjType clt)
     rootData->lastKnownClt = clt;
 }
 
-void SymHeapCore::setObjLoc(TObjId obj, cl_loc loc)
+void SymHeapCore::setObjLoc(TObjId obj, struct cl_loc loc)
 {
     Region *rootData;
     d->ents.getEntRW(&rootData, obj);

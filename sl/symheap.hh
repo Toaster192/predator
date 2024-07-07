@@ -557,9 +557,7 @@ class SymHeapCore {
 
         int getLocCount();
 
-        void setObjLoc(TObjId obj, const cl_loc* loc);
-
-        void setObjLoc(TObjId, cl_loc);
+        void setObjLoc(TObjId, struct cl_loc);
         cl_loc getObjLoc(TObjId) const;
 
         /// return true if the given object can be still accessed safely

@@ -213,10 +213,13 @@ json describeVarCore(int *pInst, SMGData &data, const TObjId obj)
         loc["line"] = var.loc.line;
         loc["column"] = var.loc.column;
         if (var.loc.llvm_insn){
-            std::string str;
-            llvm::raw_string_ostream ss(str);
-            ss << *((llvm::Instruction*) var.loc.llvm_insn);
-            loc["insn"] = ss.str();
+            const llvm::Value* value = static_cast<const llvm::Value*>(var.loc.llvm_insn);
+            if (llvm::isa<llvm::Instruction>(value)) {
+                std::string str;
+                llvm::raw_string_ostream ss(str);
+                ss << *((llvm::Instruction*) var.loc.llvm_insn);
+                loc["insn"] = ss.str();
+            }
         }
 
         out["loc"] = loc;
@@ -357,10 +360,13 @@ json jsonifyRawObject(SMGData &data, const TObjId obj)
             loc_j["line"] = loc.line;
             loc_j["column"] = loc.column;
             if (loc.llvm_insn){
-                std::string str;
-                llvm::raw_string_ostream ss(str);
-                ss << *((llvm::Instruction*) loc.llvm_insn);
-                loc_j["insn"] = ss.str();
+                const llvm::Value* value = static_cast<const llvm::Value*>(loc.llvm_insn);
+                if (llvm::isa<llvm::Instruction>(value)) {
+                    std::string str;
+                    llvm::raw_string_ostream ss(str);
+                    ss << *((llvm::Instruction*) loc.llvm_insn);
+                    loc_j["insn"] = ss.str();
+                }
             }
 
             j["loc"] = loc_j;
@@ -758,10 +764,13 @@ void jsonifySingleValue(SMGData &data, const TValId val)
             loc_j["line"] = loc.line;
             loc_j["column"] = loc.column;
             if (loc.llvm_insn){
-                std::string str;
-                llvm::raw_string_ostream ss(str);
-                ss << *((llvm::Instruction*) loc.llvm_insn);
-                loc_j["insn"] = ss.str();
+                const llvm::Value* value = static_cast<const llvm::Value*>(loc.llvm_insn);
+                if (llvm::isa<llvm::Instruction>(value)) {
+                    std::string str;
+                    llvm::raw_string_ostream ss(str);
+                    ss << *((llvm::Instruction*) loc.llvm_insn);
+                    loc_j["insn"] = ss.str();
+                }
             }
 
             j["loc"] = loc_j;
@@ -1064,8 +1073,18 @@ bool smg2jsonCore(
     } else {
     */
     if (loc && loc->llvm_insn){
-        llvm::Instruction *insn = ((llvm::Instruction*) loc->llvm_insn);
-        data.j["metadata"] = {{"func_name", insn->getFunction()->getName()}, {"line", loc->line}, {"column", loc->column}, {"file", loc->file}};
+        const llvm::Value* value = static_cast<const llvm::Value*>(loc->llvm_insn);
+        if (!llvm::isa<llvm::Instruction>(value)) {
+            data.j["metadata"] = {{"func_name", "unknown"}, {"line", loc->line}, {"column", loc->column}, {"file", loc->file}};
+        } else {
+            const llvm::Instruction *insn = llvm::dyn_cast<llvm::Instruction>(value);
+            const llvm::BasicBlock* bb = insn->getParent();
+            if (bb) {
+                data.j["metadata"] = {{"func_name", bb->getParent()->getName()}, {"line", loc->line}, {"column", loc->column}, {"file", loc->file}};
+            } else {
+                data.j["metadata"] = {{"func_name", "unknown"}, {"line", loc->line}, {"column", loc->column}, {"file", loc->file}};
+            }
+        }
     } else if (loc){
         data.j["metadata"] = {{"func_name", "unknown"}, {"line", loc->line}, {"column", loc->column}, {"file", loc->file}};
     } else {
@@ -1075,7 +1094,11 @@ bool smg2jsonCore(
     // do our stuff
     jsonifyEverything(data);
 
-    out << j.dump(4) << std::endl;
+    try {
+        out << j.dump(4) << std::endl;
+    } catch (std::exception& e) {
+        CL_ERROR(e.what());
+    }
     // close graph
     const bool ok = !!out;
     out.close();
