@@ -534,7 +534,7 @@ struct Region: public AbstractHeapEntity {
         lastKnownClt(0),
         isValid(true),
         protoLevel(/* not a prototype */ 0),
-        loc({0,0,0,0,0})
+        loc({0,0,0,0})
     {
     }
 

@@ -212,15 +212,6 @@ json describeVarCore(int *pInst, SMGData &data, const TObjId obj)
         loc["file"] = var.loc.file;
         loc["line"] = var.loc.line;
         loc["column"] = var.loc.column;
-        if (var.loc.llvm_insn){
-            const llvm::Value* value = static_cast<const llvm::Value*>(var.loc.llvm_insn);
-            if (llvm::isa<llvm::Instruction>(value)) {
-                std::string str;
-                llvm::raw_string_ostream ss(str);
-                ss << *((llvm::Instruction*) var.loc.llvm_insn);
-                loc["insn"] = ss.str();
-            }
-        }
 
         out["loc"] = loc;
         *pInst = cv.inst;
@@ -359,16 +350,6 @@ json jsonifyRawObject(SMGData &data, const TObjId obj)
             loc_j["file"] = loc.file;
             loc_j["line"] = loc.line;
             loc_j["column"] = loc.column;
-            if (loc.llvm_insn){
-                const llvm::Value* value = static_cast<const llvm::Value*>(loc.llvm_insn);
-                if (llvm::isa<llvm::Instruction>(value)) {
-                    std::string str;
-                    llvm::raw_string_ostream ss(str);
-                    ss << *((llvm::Instruction*) loc.llvm_insn);
-                    loc_j["insn"] = ss.str();
-                }
-            }
-
             j["loc"] = loc_j;
         }
     }
@@ -763,16 +744,6 @@ void jsonifySingleValue(SMGData &data, const TValId val)
             loc_j["file"] = loc.file;
             loc_j["line"] = loc.line;
             loc_j["column"] = loc.column;
-            if (loc.llvm_insn){
-                const llvm::Value* value = static_cast<const llvm::Value*>(loc.llvm_insn);
-                if (llvm::isa<llvm::Instruction>(value)) {
-                    std::string str;
-                    llvm::raw_string_ostream ss(str);
-                    ss << *((llvm::Instruction*) loc.llvm_insn);
-                    loc_j["insn"] = ss.str();
-                }
-            }
-
             j["loc"] = loc_j;
         }
     }

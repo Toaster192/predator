@@ -31,7 +31,6 @@ extern "C" {
 #include "clplug.hh"
 
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/raw_ostream.h"
 
 #if defined(LLVM_VERSION_MAJOR) && ((LLVM_VERSION_MAJOR > 3) || \
                                     ((LLVM_VERSION_MAJOR == 3) && (LLVM_VERSION_MINOR >= 7)))
@@ -117,7 +116,6 @@ struct cl_loc cl_loc_known = {
     0,                             // .line
     0,                             // .column
     0,                             // .sysp
-    0,                             // .llvm_insn
 };
 
 static struct cl_type builtinIntType = {
@@ -298,7 +296,6 @@ void CLPass::freeAccessor(struct cl_accessor *acc) {
 void CLPass::findLocation(Instruction *i, struct cl_loc *loc) {
 
     *loc = cl_loc_known;
-    loc->llvm_insn = i;
 
 #ifdef LLVM_HOST_3_7_OR_NEWER
     if (DebugLoc dbg = i->getDebugLoc()) {
@@ -981,7 +978,6 @@ struct cl_var *CLPass::handleVariable(Value *v) {
     }
 
     clv->loc = cl_loc_known;
-    clv->llvm_val = v;
     clv->name = nullptr;
     clv->artificial = true;
     if (v == nullptr)

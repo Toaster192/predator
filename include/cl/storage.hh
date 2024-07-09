@@ -101,11 +101,6 @@ struct Var {
     bool                        isExtern = false;
 
     /**
-     * Used to pass an llvm value pointer to sl.
-     */
-    void                        *llvmValue;
-
-    /**
      * true if there is at least one instruction in the program that takes an
      * address of the variable (or some part of it)
      */

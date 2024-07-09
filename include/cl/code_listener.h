@@ -62,10 +62,6 @@ struct cl_loc {
      * @note not used for now
      */
     bool                                sysp;
-    /**
-     * Used to pass an llvm instruction pointer to sl.
-     */
-    void				*llvm_insn;
 };
 
 /**
@@ -480,10 +476,6 @@ struct cl_var {
      * true if the variable is external (defined in another module)
      */
     bool                                is_extern;
-    /**
-     * Used to pass an llvm value pointer to sl.
-     */
-    void				*llvm_val;
 };
 
 /**
