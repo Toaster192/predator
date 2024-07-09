@@ -1067,28 +1067,11 @@ bool smg2jsonCore(
     data.j["compositeObjects"] = json::array();
     data.j["values"] = json::array();
     data.j["edges"] = json::array();
-    /* in case the "__initglobvar" thing is not ideal
-    if (loc->line == 0){
-        data.j["metadata"] = {{"func_name", ""}};
+
+    if (loc){
+        data.j["metadata"] = {{"func_name", name}, {"line", loc->line}, {"column", loc->column}, {"file", loc->file}};
     } else {
-    */
-    if (loc && loc->llvm_insn){
-        const llvm::Value* value = static_cast<const llvm::Value*>(loc->llvm_insn);
-        if (!llvm::isa<llvm::Instruction>(value)) {
-            data.j["metadata"] = {{"func_name", "unknown"}, {"line", loc->line}, {"column", loc->column}, {"file", loc->file}};
-        } else {
-            const llvm::Instruction *insn = llvm::dyn_cast<llvm::Instruction>(value);
-            const llvm::BasicBlock* bb = insn->getParent();
-            if (bb) {
-                data.j["metadata"] = {{"func_name", bb->getParent()->getName()}, {"line", loc->line}, {"column", loc->column}, {"file", loc->file}};
-            } else {
-                data.j["metadata"] = {{"func_name", "unknown"}, {"line", loc->line}, {"column", loc->column}, {"file", loc->file}};
-            }
-        }
-    } else if (loc){
-        data.j["metadata"] = {{"func_name", "unknown"}, {"line", loc->line}, {"column", loc->column}, {"file", loc->file}};
-    } else {
-        data.j["metadata"] = {{"func_name", "unknown"}};
+        data.j["metadata"] = {{"func_name", name}};
     }
 
     // do our stuff

@@ -180,9 +180,9 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *configString)
     if (fixedPoint) {
         // plot fixed-point
         if (GlConf::data.dump_json) {
-            fixedPoint->toJson();
-            // temp debug
+            // For debuging, plot in this branch as well
             fixedPoint->plotAll();
+            fixedPoint->toJson();
         } else {
             fixedPoint->plotAll();
         }
