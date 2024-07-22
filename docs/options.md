@@ -31,4 +31,5 @@ For the GCC-plugin, use with the prefix `-fplugin-arg-libsl`. Default option in 
 | `state_live_ordering[:<uint>]` | On the fly ordering of SPCs to be processed<ol><li value="0">do not try to optimise the order of heaps</li><li>reorder heaps when joining</li><b><li>reorder heaps when creating their union (list of SMGs) too</li></b></ol> |
 | `no_plot` | Do not generate graphs (ignore all calls of `__sl_plot*()` and `__VERIFIER_plot()`) |
 | `dump_fixed_point` | Dump SPCs of the obtained fixed-point |
+| `dump_to_json` | Dump SPCs of the obtained fixed-point in the `.json` format |
 | `detect_containers` | Detect low-level implementations of high-level list containers and operations over them (such as various initialisers, iterators, etc.) |
